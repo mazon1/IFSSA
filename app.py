@@ -17,7 +17,13 @@ try:
 
     feature_names = numerical_features + categorical_features
 
+except FileNotFoundError:
+    st.error("Model file or dataset not found. Please ensure 'best_model.pkl' and 'model_performance_comparison.csv' are available.")
+    st.stop()
 
+except Exception as e:
+    st.error(f"An error occurred while loading the model or dataset: {e}")
+    st.stop()
 
 # Streamlit App
 st.title("Customer Churn Prediction App")
@@ -48,17 +54,22 @@ elif page == "EDA":
 
     # Display histogram
     st.subheader(f"Histogram of {feature_to_plot}")
-    df = pd.read_csv("your_dataset.csv")  # Load dataset
-    fig, ax = plt.subplots()
-    sns.histplot(df[feature_to_plot], bins=30, kde=True, ax=ax)
-    st.pyplot(fig)
+    
+    try:
+        df = pd.read_csv("your_dataset.csv")  # Load dataset
+        fig, ax = plt.subplots()
+        sns.histplot(df[feature_to_plot], bins=30, kde=True, ax=ax)
+        st.pyplot(fig)
 
-    # Correlation Heatmap
-    st.subheader("Feature Correlation Heatmap")
-    correlation_matrix = df[numerical_features].corr()
-    fig, ax = plt.subplots(figsize=(8, 6))
-    sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5, ax=ax)
-    st.pyplot(fig)
+        # Correlation Heatmap
+        st.subheader("Feature Correlation Heatmap")
+        correlation_matrix = df[numerical_features].corr()
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5, ax=ax)
+        st.pyplot(fig)
+    
+    except FileNotFoundError:
+        st.error("Dataset file 'your_dataset.csv' not found.")
 
 # ML Page (Model Prediction)
 elif page == "ML":
