@@ -8,7 +8,7 @@ from sklearn.preprocessing import LabelEncoder
 
 # Load the pre-trained model and data
 try:
-    model_pipeline = joblib.load("xgboost_tuned_model.pkl")
+    model_pipeline = joblib.load("best_model.pkl")
     comparison_df = pd.read_csv("model_performance_comparison.csv")  # Load model performance data
 
     # Define feature names
