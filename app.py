@@ -17,9 +17,7 @@ try:
 
     feature_names = numerical_features + categorical_features
 
-except FileNotFoundError:
-    st.error("Model file not found. Please ensure 'xgboost_tuned_model.pkl' and required files exist.")
-    st.stop()
+
 
 # Streamlit App
 st.title("Customer Churn Prediction App")
