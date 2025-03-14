@@ -9,7 +9,7 @@ from sklearn.preprocessing import LabelEncoder
 # Load the pre-trained model and data
 try:
     model_pipeline = joblib.load("best_model.pkl")
-    comparison_df = pd.read_csv("model_performance_comparison.csv")  # Load model performance data
+    
 
     # Define feature names
     numerical_features = ["numerical_feature_1", "numerical_feature_2"]
@@ -17,13 +17,7 @@ try:
 
     feature_names = numerical_features + categorical_features
 
-except FileNotFoundError:
-    st.error("Model file or dataset not found. Please ensure 'best_model.pkl' and 'model_performance_comparison.csv' are available.")
-    st.stop()
 
-except Exception as e:
-    st.error(f"An error occurred while loading the model or dataset: {e}")
-    st.stop()
 
 # Streamlit App
 st.title("Customer Churn Prediction App")
