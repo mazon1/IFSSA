@@ -1,100 +1,43 @@
 import streamlit as st
 import pandas as pd
+import pickle
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import joblib
 
-# Load Model and Data
-@st.cache_data
-def load_data():
-    try:
-        df = pd.read_csv("df.csv")  # Load dataset
-        return df
-    except FileNotFoundError:
-        st.error("Dataset 'df.csv' not found.")
-        return None
-
+# Load trained model
 @st.cache_resource
 def load_model():
-    try:
-        model = joblib.load("best_model.pkl")  # Load model
-        return model
-    except FileNotFoundError:
-        st.error("Model file 'best_model.pkl' not found.")
-        return None
+    with open("best_model.pkl", "rb") as f:
+        model = pickle.load(f)
+    return model
 
-# Initialize Data and Model
-df = load_data()
 model = load_model()
 
-# Streamlit App
-st.title("Customer Churn Prediction App")
+# Define user inputs
+st.title("Hamper Pickup Prediction App")
+st.write("Enter details to predict the outcome of a hamper pickup.")
 
-# Sidebar Navigation
-page = st.sidebar.selectbox("Select a page", ["Dashboard", "EDA", "ML"])
+# User inputs
+dependents_qty = st.number_input("Number of Dependents", min_value=0, max_value=10, step=1)
+total_visits = st.number_input("Total Visits", min_value=1, max_value=100, step=1)
+avg_days_between_pickups = st.number_input("Avg Days Between Pickups", min_value=1.0, max_value=100.0, step=0.1)
+distance_to_center = st.number_input("Distance to Center (km)", min_value=0.0, max_value=50.0, step=0.1)
 
-# Dashboard Page
-if page == "Dashboard":
-    st.header("Project Overview")
-    st.write("This project aims to predict customer churn using machine learning.")
-    
-    st.subheader("Dataset Preview")
-    if df is not None:
-        st.dataframe(df.head())
+# Categorical inputs
+sex = st.selectbox("Sex", ["Male", "Female"])
+status = st.selectbox("Client Status", ["Active", "Closed", "Flagged", "Outreach", "Pending"])
+location_cluster = st.selectbox("Location Cluster", [1, 2, 3, 4, 5])
 
-    st.subheader("Model Status")
-    if model:
-        st.success("Model successfully loaded!")
-    else:
-        st.error("Model not found. Please check your files.")
+# Convert categorical values
+sex_encoded = 1 if sex == "Male" else 0
+status_encoded = ["Active", "Closed", "Flagged", "Outreach", "Pending"].index(status)
+location_cluster_encoded = int(location_cluster)
 
-# EDA Page
-elif page == "EDA":
-    st.header("Exploratory Data Analysis")
+# Prepare input data for model
+input_data = np.array([[dependents_qty, total_visits, avg_days_between_pickups, 
+                         distance_to_center, sex_encoded, status_encoded, location_cluster_encoded]])
 
-    if df is not None:
-        # Show dataset info
-        st.write(f"Dataset contains {df.shape[0]} rows and {df.shape[1]} columns.")
+# Make Prediction
+if st.button("Predict"):
+    prediction = model.predict(input_data)
+    st.success(f"Predicted Outcome: {prediction[0]}")
 
-        # Select a feature for visualization
-        feature = st.selectbox("Select a numerical feature", df.select_dtypes(include=np.number).columns)
-        
-        # Histogram
-        st.subheader(f"Histogram of {feature}")
-        fig, ax = plt.subplots()
-        sns.histplot(df[feature], bins=30, kde=True, ax=ax)
-        st.pyplot(fig)
-
-        # Correlation Heatmap
-        st.subheader("Feature Correlation Heatmap")
-        fig, ax = plt.subplots(figsize=(8, 6))
-        sns.heatmap(df.corr(), annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5, ax=ax)
-        st.pyplot(fig)
-
-    else:
-        st.error("Dataset not available.")
-
-# ML Page
-elif page == "ML":
-    st.header("Make a Prediction")
-
-    if model is not None and df is not None:
-        st.subheader("Enter Feature Values")
-
-        input_data = {}
-        for col in df.columns[:-1]:  # Exclude target column
-            if df[col].dtype == "object":
-                input_data[col] = st.selectbox(f"Select {col}", df[col].unique())
-            else:
-                input_data[col] = st.number_input(f"Enter {col}", value=float(df[col].mean()))
-
-        # Convert to DataFrame
-        input_df = pd.DataFrame([input_data])
-
-        # Make Prediction
-        if st.button("Predict"):
-            prediction = model.predict(input_df)[0]
-            st.success(f"Prediction: {'Churn' if prediction == 1 else 'Not Churn'}")
-    else:
-        st.error("Model or dataset not available.")
