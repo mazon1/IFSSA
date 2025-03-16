@@ -7,19 +7,20 @@ import numpy as np
 @st.cache_resource
 def load_model():
     try:
-        return joblib.load('model.joblib')
+        return joblib.load("model_top5.pkl")  # Load the updated model
     except Exception as e:
         st.error(f"Error loading model: {e}")
         return None
 
 model = load_model()
 
-# Define the required columns (ensure this matches training data)
+# Define only the top 5 features
 REQUIRED_COLUMNS = [
-    'Creator', 'agent_related', 'hamper_type', 'household', 'dw', 'is_single_pickup',
-    'avg_days_between_pickups', 'sex_Male', 'status_married', 'location_cluster_2',
-    'location_cluster_3', 'location_cluster_4', 'location_cluster_5', 'location_cluster_6',
-    'location_cluster_7'
+    "year_month_2024-08",  # One-hot encoded feature
+    "total_visits",
+    "avg_days_between_pickups",
+    "month",
+    "days_since_last_pickup"
 ]
 
 # Function to preprocess input data
@@ -31,74 +32,40 @@ def preprocess_input(input_data):
         if col not in input_df.columns:
             input_df[col] = 0  # Set missing columns to 0
 
-    # Ensure correct column order
+    # Ensure the column order matches model training
     input_df = input_df[REQUIRED_COLUMNS]
-
-    # Convert all data to numerical format
-    input_df = input_df.astype(float)
-
     return input_df
 
 # Streamlit app UI
 st.title("Hamper Return Prediction App")
-st.write("Fill in the details below to predict if a client will return.")
+st.write("Enter details to predict if a client will return.")
 
-# User input fields
-creator = st.number_input("Creator", min_value=1, value=1, step=1)
-agent_related = st.number_input("Agent Related", min_value=1, value=1, step=1)
-hamper_type = st.number_input("Hamper Type", min_value=1, value=1, step=1)
-household = st.number_input("Household", min_value=1, value=1, step=1)
-dw = st.selectbox("DW", ["yes", "no"])
-is_single_pickup = st.selectbox("Is Single Pickup", [0, 1])  # Assuming 0/1 encoding
-avg_days_between_pickups = st.number_input("Avg Days Between Pickups", min_value=1, value=7)
-sex_male = st.selectbox("Sex (Male)", [0, 1])  # Assuming 0/1 encoding
-status_married = st.selectbox("Status (Married)", [0, 1])  # Assuming 0/1 encoding
-
-# Location cluster selection
-location_cluster = st.selectbox("Location Cluster", [2, 3, 4, 5, 6, 7])
+# User input fields (matching the top 5 important features)
+year_month = st.selectbox("Year-Month", ["2024-08", "2024-07", "2024-06"])
+total_visits = st.number_input("Total Visits", min_value=1, max_value=100, step=1)
+avg_days_between_pickups = st.number_input("Avg Days Between Pickups", min_value=1.0, max_value=100.0, step=0.1)
+month = st.number_input("Month", min_value=1, max_value=12, step=1)
+days_since_last_pickup = st.number_input("Days Since Last Pickup", min_value=0, step=1)
 
 # Prepare input data
 input_data = {
-    'Creator': creator,
-    'agent_related': agent_related,
-    'hamper_type': hamper_type,
-    'household': household,
-    'dw': 1 if dw == "yes" else 0,  # Convert 'dw' to numerical
-    'is_single_pickup': is_single_pickup,
-    'avg_days_between_pickups': avg_days_between_pickups,
-    'sex_Male': sex_male,
-    'status_married': status_married,
-    'location_cluster_2': 1 if location_cluster == 2 else 0,
-    'location_cluster_3': 1 if location_cluster == 3 else 0,
-    'location_cluster_4': 1 if location_cluster == 4 else 0,
-    'location_cluster_5': 1 if location_cluster == 5 else 0,
-    'location_cluster_6': 1 if location_cluster == 6 else 0,
-    'location_cluster_7': 1 if location_cluster == 7 else 0,
+    "year_month_2024-08": 1 if year_month == "2024-08" else 0,  # One-hot encoding for year-month
+    "total_visits": total_visits,
+    "avg_days_between_pickups": avg_days_between_pickups,
+    "month": month,
+    "days_since_last_pickup": days_since_last_pickup,
 }
 
-# Prediction
+# Prediction button
 if st.button("Predict"):
     if model is None:
-        st.error("Model not loaded. Please check if 'model.joblib' exists.")
+        st.error("Model not loaded. Please check if 'model_top5.pkl' exists.")
     else:
-        try:
-            input_df = preprocess_input(input_data)
-            
-            # Check for NaN values
-            if input_df.isnull().values.any():
-                st.error("Input contains missing values. Please check your inputs.")
+        input_df = preprocess_input(input_data)
+        prediction = model.predict(input_df)
+        probability = model.predict_proba(input_df)
 
-            # Check for unexpected column types
-            if not all(input_df.dtypes == float):
-                st.error("Input data has incorrect types. Ensure all inputs are numeric.")
-
-            # Make prediction
-            prediction = model.predict(input_df)
-            probability = model.predict_proba(input_df)
-
-            st.subheader("Prediction Result:")
-            st.write("✅ Prediction: **Yes**" if prediction[0] == 1 else "❌ Prediction: **No**")
-            st.write(f"📊 Probability (Yes): **{probability[0][1]:.4f}**")
-            st.write(f"📊 Probability (No): **{probability[0][0]:.4f}**")
-        except Exception as e:
-            st.error(f"Prediction error: {e}")
+        st.subheader("Prediction Result:")
+        st.write("✅ Prediction: **Yes**" if prediction[0] == 1 else "❌ Prediction: **No**")
+        st.write(f"📊 Probability (Yes): **{probability[0][1]:.4f}**")
+        st.write(f"📊 Probability (No): **{probability[0][0]:.4f}**")
