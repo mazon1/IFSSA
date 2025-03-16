@@ -1,0 +1,5 @@
+streamlit
+pandas
+numpy
+scikit-learn
+pickle5  # Only required if you're using an older pickle format
