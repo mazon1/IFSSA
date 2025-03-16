@@ -31,8 +31,12 @@ def preprocess_input(input_data):
         if col not in input_df.columns:
             input_df[col] = 0  # Set missing columns to 0
 
-    # Ensure the column order matches model training
+    # Ensure correct column order
     input_df = input_df[REQUIRED_COLUMNS]
+
+    # Convert all data to numerical format
+    input_df = input_df.astype(float)
+
     return input_df
 
 # Streamlit app UI
@@ -40,10 +44,10 @@ st.title("Hamper Return Prediction App")
 st.write("Fill in the details below to predict if a client will return.")
 
 # User input fields
-creator = st.number_input("Creator", min_value=1, value=1)
-agent_related = st.number_input("Agent Related", min_value=1, value=1)
-hamper_type = st.number_input("Hamper Type", min_value=1, value=1)
-household = st.number_input("Household", min_value=1, value=1)
+creator = st.number_input("Creator", min_value=1, value=1, step=1)
+agent_related = st.number_input("Agent Related", min_value=1, value=1, step=1)
+hamper_type = st.number_input("Hamper Type", min_value=1, value=1, step=1)
+household = st.number_input("Household", min_value=1, value=1, step=1)
 dw = st.selectbox("DW", ["yes", "no"])
 is_single_pickup = st.selectbox("Is Single Pickup", [0, 1])  # Assuming 0/1 encoding
 avg_days_between_pickups = st.number_input("Avg Days Between Pickups", min_value=1, value=7)
@@ -77,11 +81,24 @@ if st.button("Predict"):
     if model is None:
         st.error("Model not loaded. Please check if 'model.joblib' exists.")
     else:
-        input_df = preprocess_input(input_data)
-        prediction = model.predict(input_df)
-        probability = model.predict_proba(input_df)
+        try:
+            input_df = preprocess_input(input_data)
+            
+            # Check for NaN values
+            if input_df.isnull().values.any():
+                st.error("Input contains missing values. Please check your inputs.")
 
-        st.subheader("Prediction Result:")
-        st.write("✅ Prediction: **Yes**" if prediction[0] == 1 else "❌ Prediction: **No**")
-        st.write(f"📊 Probability (Yes): **{probability[0][1]:.4f}**")
-        st.write(f"📊 Probability (No): **{probability[0][0]:.4f}**")
+            # Check for unexpected column types
+            if not all(input_df.dtypes == float):
+                st.error("Input data has incorrect types. Ensure all inputs are numeric.")
+
+            # Make prediction
+            prediction = model.predict(input_df)
+            probability = model.predict_proba(input_df)
+
+            st.subheader("Prediction Result:")
+            st.write("✅ Prediction: **Yes**" if prediction[0] == 1 else "❌ Prediction: **No**")
+            st.write(f"📊 Probability (Yes): **{probability[0][1]:.4f}**")
+            st.write(f"📊 Probability (No): **{probability[0][0]:.4f}**")
+        except Exception as e:
+            st.error(f"Prediction error: {e}")
